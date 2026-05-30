@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Bot, Download, Plus, Search, Upload, Lock, Sparkles, Trash2, Menu, X } from 'lucide-react';
 import { Category, Priority, Task, TaskStatus } from '@/lib/types';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const API = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/tasks` : null;
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const API = SUPABASE_URL && SUPABASE_KEY ? `${SUPABASE_URL}/rest/v1/tasks` : null;
 const HEADERS = {
   'Content-Type': 'application/json',
   'apikey': SUPABASE_KEY,
@@ -124,40 +124,51 @@ export default function Home() {
   // ── Task operations ──────────────────────────────────────
   async function addTask() {
     const now = new Date().toISOString();
-    const newTask: Task = { id: crypto.randomUUID(), title:'New task', notes:'', category:'Admin', status:'todo', priority:'medium', assignee:'Eric', dueDate:'', createdAt:now, updatedAt:now };
+    const tempId = crypto.randomUUID();
+    const newTask: Task = { id: tempId, title:'New task', notes:'', category:'Admin', status:'todo', priority:'medium', assignee:'Eric', dueDate:'', createdAt:now, updatedAt:now };
     setTasks(p=>[newTask,...p]);
-    if (API && SUPABASE_KEY) {
+    if (API) {
       try {
-        setSyncing(true);
-        const r = await fetch(API, { method:'POST', headers: HEADERS, body: JSON.stringify({ ...taskToDb(newTask), id: newTask.id }) });
-        if (!r.ok) throw new Error();
+        setSyncing(true); setSyncError(false);
+        // Don't send id — let Supabase generate it
+        const body = taskToDb(newTask);
+        const r = await fetch(API, { method:'POST', headers: HEADERS, body: JSON.stringify(body) });
+        if (!r.ok) {
+          const errText = await r.text();
+          console.error('Supabase add error:', r.status, errText);
+          throw new Error(errText);
+        }
         const rows = await r.json();
         const saved = dbToTask(rows[0]);
-        setTasks(p=>p.map(t=>t.id===newTask.id?saved:t));
-      } catch { setSyncError(true); }
+        // Replace temp task with real Supabase record
+        setTasks(p=>p.map(t=>t.id===tempId ? saved : t));
+      } catch(e) { console.error('addTask failed:', e); setSyncError(true); }
       finally { setSyncing(false); }
     }
   }
 
   async function updateTask(id: string, patch: Partial<Task>) {
     setTasks(p=>p.map(t=>t.id===id?{...t,...patch,updatedAt:new Date().toISOString()}:t));
-    if (API && SUPABASE_KEY) {
+    if (API) {
       try {
         setSyncing(true);
-        await fetch(`${API}?id=eq.${id}`, { method:'PATCH', headers: HEADERS, body: JSON.stringify(taskToDb(patch)) });
+        const r = await fetch(`${API}?id=eq.${id}`, { method:'PATCH', headers: HEADERS, body: JSON.stringify(taskToDb(patch)) });
+        if (!r.ok) { const e = await r.text(); console.error('update error:', e); throw new Error(e); }
         setSyncError(false);
-      } catch { setSyncError(true); }
+      } catch(e) { console.error('updateTask failed:', e); setSyncError(true); }
       finally { setSyncing(false); }
     }
   }
 
   async function deleteTask(id: string) {
     setTasks(p=>p.filter(t=>t.id!==id));
-    if (API && SUPABASE_KEY) {
+    if (API) {
       try {
         setSyncing(true);
-        await fetch(`${API}?id=eq.${id}`, { method:'DELETE', headers: HEADERS });
-      } catch { setSyncError(true); }
+        const r = await fetch(`${API}?id=eq.${id}`, { method:'DELETE', headers: HEADERS });
+        if (!r.ok) { const e = await r.text(); console.error('delete error:', e); throw new Error(e); }
+        setSyncError(false);
+      } catch(e) { console.error('deleteTask failed:', e); setSyncError(true); }
       finally { setSyncing(false); }
     }
   }
