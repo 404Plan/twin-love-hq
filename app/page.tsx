@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { Bot, Download, Plus, Search, Upload, Lock, Sparkles, Trash2, Menu, X } from 'lucide-react';
+import { Bot, Download, Plus, Search, Upload, Lock, Sparkles, Trash2, Calendar, Inbox } from 'lucide-react';
+import Link from 'next/link';
 import { Category, Priority, Task, TaskStatus } from '@/lib/types';
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
@@ -250,9 +251,14 @@ export default function Home() {
             <button onClick={addTask} style={{background:'#D4537E',border:'none',borderRadius:'10px',padding:'9px 14px',color:'#fff',fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',whiteSpace:'nowrap'}}>
               <Plus size={15}/>Add Task
             </button>
+            <Link href="/calendar" style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',borderRadius:'10px',padding:'9px 12px',color:'#f5f5f5',textDecoration:'none',display:'flex',alignItems:'center',gap:'5px',fontSize:'13px'}}>
+              <Calendar size={14}/>Calendar
+            </Link>
+            <Link href="/inbox" style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',borderRadius:'10px',padding:'9px 12px',color:'#f5f5f5',textDecoration:'none',display:'flex',alignItems:'center',gap:'5px',fontSize:'13px'}}>
+              <Inbox size={14}/>Inbox
+            </Link>
             <button onClick={exportJson} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',borderRadius:'10px',padding:'9px 12px',color:'#f5f5f5',cursor:'pointer',display:'flex',alignItems:'center',gap:'5px',fontSize:'13px'}}>
               <Download size={14}/>
-              <span style={{display:'none'}} className="sm-show">Export</span>
             </button>
             <label style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',borderRadius:'10px',padding:'9px 12px',color:'#f5f5f5',cursor:'pointer',display:'flex',alignItems:'center',gap:'5px',fontSize:'13px'}}>
               <Upload size={14}/>
